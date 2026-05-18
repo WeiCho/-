@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="記帳" />
+<title>記帳工具</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE8;
+    --text: #1A1814;
+    --text2: #6B6760;
+    --text3: #A8A49F;
+    --accent: #2D5A3D;
+    --accent-light: #E8F0EB;
+    --accent-text: #1A3825;
+    --danger: #C0392B;
+    --danger-light: #FAEAE8;
+    --info: #1A4A7A;
+    --info-light: #E8EFF7;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: -apple-system, 'Hiragino Sans', 'PingFang TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+
+  .gear-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: background 0.15s;
+  }
+  .gear-btn:active { background: var(--border2); }
+
+  main { padding: 16px 16px 32px; max-width: 480px; margin: 0 auto; }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 14px 16px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .upload-zone {
+    margin: 12px 16px 16px;
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius-sm);
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    overflow: hidden;
+    background: var(--surface2);
+  }
+  .upload-zone:active { opacity: 0.7; }
+  .upload-zone.has-img {
+    border-style: solid;
+    border-color: var(--accent);
+    background: #000;
+    min-height: 180px;
+  }
+  .upload-zone img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    max-height: 260px;
+  }
+  .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-hint { font-size: 14px; color: var(--text2); }
+  .upload-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+  .fields { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; }
+
+  input[type=text], input[type=number], input[type=date], input[type=password], select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    -webkit-appearance: none;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+
+  .status {
+    margin: 0 16px 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: fadeIn 0.2s ease;
+  }
+  .status.analyzing { background: var(--info-light); color: var(--info); }
+  .status.success { background: var(--accent-light); color: var(--accent-text); }
+  .status.error { background: var(--danger-light); color: var(--danger); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .actions { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+  .btn {
+    width: 100%;
+    padding: 13px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.15s;
+    letter-spacing: -0.2px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .btn-analyze {
+    background: var(--info-light);
+    color: var(--info);
+  }
+  .btn-save {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-save:not(:disabled):active { background: var(--accent-text); }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Settings modal */
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 480px;
+    padding: 24px 20px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .modal h2 { font-size: 17px; font-weight: 600; margin-bottom: 16px; }
+  .modal-fields { display: flex; flex-direction: column; gap: 12px; }
+  .modal-field { display: flex; flex-direction: column; gap: 5px; }
+  .modal-field label { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .modal-hint { font-size: 12px; color: var(--text3); line-height: 1.5; margin-top: 4px; }
+
+  .btn-modal-save {
+    margin-top: 16px;
+    width: 100%;
+    padding: 13px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .btn-modal-save:active { background: var(--accent-text); }
+
+  /* Log */
+  .log-list { padding: 0 16px; }
+  .log-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-left { display: flex; flex-direction: column; gap: 2px; }
+  .log-name { font-size: 15px; font-weight: 500; }
+  .log-meta { font-size: 12px; color: var(--text3); }
+  .log-amount { font-size: 16px; font-weight: 600; color: var(--accent-text); white-space: nowrap; }
+  .tag {
+    display: inline-block;
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  .empty-log {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📒 記帳</h1>
+  <button class="gear-btn" onclick="openSettings()" aria-label="設定">⚙️</button>
+</header>
+
+<main>
+  <div class="card">
+    <div class="card-header">上傳收據</div>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" role="button" aria-label="上傳照片">
+      <div class="upload-icon">📷</div>
+      <div class="upload-hint">點擊上傳收據照片</div>
+      <div class="upload-sub">支援 JPG、PNG、HEIC</div>
+    </div>
+    <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none" onchange="handleFile(event)" />
+  </div>
+
+  <div class="card">
+    <div class="card-header">記帳資料</div>
+    <div id="status-area"></div>
+    <div class="fields">
+      <div class="field">
+        <label>名稱</label>
+        <input type="text" id="field-name" placeholder="例：全家超商" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>金額</label>
+          <input type="number" id="field-amount" placeholder="0" inputmode="decimal" />
+        </div>
+        <div class="field">
+          <label>類別</label>
+          <select id="field-category">
+            <option value="">選擇</option>
+            <option>餐飲</option>
+            <option>交通</option>
+            <option>購物</option>
+            <option>娛樂</option>
+            <option>醫療</option>
+            <option>居家</option>
+            <option>其他</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>日期</label>
+        <input type="date" id="field-date" />
+      </div>
+      <div class="field">
+        <label>備註</label>
+        <input type="text" id="field-note" placeholder="選填" />
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-analyze" id="btn-analyze" onclick="analyzeImage()" disabled>
+        ✨ AI 辨識照片
+      </button>
+      <button class="btn btn-save" id="btn-save" onclick="saveToNotion()" disabled>
+        儲存到 Notion
+      </button>
+    </div>
+  </div>
+
+  <div class="card" id="log-card">
+    <div class="card-header" style="padding-bottom:8px;">本次紀錄</div>
+    <div id="log-container">
+      <div class="empty-log">還沒有紀錄</div>
+    </div>
+  </div>
+</main>
+
+<!-- Settings Modal -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeSettingsOnBackdrop(event)">
+  <div class="modal">
+    <h2>⚙️ 設定</h2>
+    <div class="modal-fields">
+      <div class="modal-field">
+        <label>Notion API Token</label>
+        <input type="password" id="s-token" placeholder="ntn_..." autocomplete="off" />
+      </div>
+      <div class="modal-field">
+        <label>Database ID</label>
+        <input type="text" id="s-db" placeholder="364971f836ec80e1bddbc5a0f66ba443" autocomplete="off" />
+      </div>
+      <p class="modal-hint">Token 與 Database ID 只儲存在你的手機瀏覽器本地，不會傳送給任何人。</p>
+    </div>
+    <button class="btn-modal-save" onclick="saveSettings()">儲存設定</button>
+  </div>
+</div>
+
+<script>
+let imageBase64 = null;
+let imageMediaType = 'image/jpeg';
+let logs = [];
+
+// init
+document.getElementById('field-date').value = new Date().toISOString().split('T')[0];
+loadSettings();
+
+function loadSettings() {
+  const t = localStorage.getItem('notion_token') || '';
+  const d = localStorage.getItem('notion_db') || '';
+  document.getElementById('s-token').value = t;
+  document.getElementById('s-db').value = d;
+}
+
+function openSettings() {
+  loadSettings();
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
+
+function closeSettingsOnBackdrop(e) {
+  if (e.target === document.getElementById('modal-backdrop')) closeSettings();
+}
+
+function saveSettings() {
+  const t = document.getElementById('s-token').value.trim();
+  const d = document.getElementById('s-db').value.trim();
+  if (t) localStorage.setItem('notion_token', t);
+  if (d) localStorage.setItem('notion_db', d);
+  closeSettings();
+  setStatus('設定已儲存', 'success');
+  setTimeout(() => setStatus(''), 2000);
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  imageMediaType = file.type || 'image/jpeg';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const dataUrl = ev.target.result;
+    imageBase64 = dataUrl.split(',')[1];
+    const zone = document.getElementById('upload-zone');
+    zone.classList.add('has-img');
+    zone.innerHTML = '<img src="' + dataUrl + '" alt="收據照片" />';
+    document.getElementById('btn-analyze').disabled = false;
+    document.getElementById('btn-save').disabled = false;
+    setStatus('');
+  };
+  reader.readAsDataURL(file);
+}
+
+function setStatus(msg, type) {
+  const area = document.getElementById('status-area');
+  if (!msg) { area.innerHTML = ''; return; }
+  const icons = { analyzing: '<div class="spinner"></div>', success: '✓', error: '✕' };
+  area.innerHTML = '<div class="status ' + type + '">' + icons[type] + msg + '</div>';
+}
+
+async function analyzeImage() {
+  if (!imageBase64) return;
+  const token = localStorage.getItem('notion_token') || '';
+  if (!token) {
+    setStatus('請先在設定填入 Notion Token', 'error');
+    openSettings();
+    return;
+  }
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> 辨識中...';
+  setStatus('AI 辨識照片中...', 'analyzing');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: imageMediaType, data: imageBase64 }
+            },
+            {
+              type: 'text',
+              text: '這是一張收據或帳單照片。請辨識並只回傳 JSON，不要任何其他文字或 markdown：\n{"name":"店名或品項簡述（中文，10字以內）","amount":金額數字,"category":"餐飲或交通或購物或娛樂或醫療或居家或其他","date":"YYYY-MM-DD，看不到就用今天 ' + new Date().toISOString().split('T')[0] + '","note":"品項清單簡述，可空字串"}'
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.content.map(i => i.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    document.getElementById('field-name').value = parsed.name || '';
+    document.getElementById('field-amount').value = parsed.amount || '';
+    document.getElementById('field-note').value = parsed.note || '';
+    if (parsed.date) document.getElementById('field-date').value = parsed.date;
+    const sel = document.getElementById('field-category');
+    for (let o of sel.options) { if (o.value === parsed.category) { sel.value = parsed.category; break; } }
+
+    setStatus('辨識完成！請確認後點儲存', 'success');
+    document.getElementById('btn-save').disabled = false;
+  } catch(err) {
+    setStatus('辨識失敗：' + err.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '✨ AI 辨識照片';
+}
+
+async function saveToNotion() {
+  const token = localStorage.getItem('notion_token') || '';
+  const dbId = localStorage.getItem('notion_db') || '';
+  if (!token || !dbId) {
+    setStatus('請先在設定填入 Token 和 Database ID', 'error');
+    openSettings();
+    return;
+  }
+
+  const name = document.getElementById('field-name').value.trim();
+  const amount = parseFloat(document.getElementById('field-amount').value) || 0;
+  const category = document.getElementById('field-category').value;
+  const date = document.getElementById('field-date').value;
+  const note = document.getElementById('field-note').value.trim();
+
+  if (!name) { setStatus('請填入名稱', 'error'); return; }
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> 儲存中...';
+  setStatus('儲存到 Notion...', 'analyzing');
+
+  const props = {
+    "名稱": { title: [{ text: { content: name } }] },
+    "金額": { number: amount },
+    "日期": { date: { start: date || new Date().toISOString().split('T')[0] } },
+    "備註": { rich_text: [{ text: { content: note } }] }
+  };
+  if (category) props["類別"] = { select: { name: category } };
+
+  try {
+    const res = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({ parent: { database_id: dbId }, properties: props })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || ('HTTP ' + res.status));
+    }
+
+    setStatus('已記錄到 Notion ✓', 'success');
+    addLog(name, amount, category, date);
+    btn.innerHTML = '✓ 已儲存';
+
+    // reset after 2s
+    setTimeout(() => {
+      document.getElementById('upload-zone').classList.remove('has-img');
+      document.getElementById('upload-zone').innerHTML = '<div class="upload-icon">📷</div><div class="upload-hint">點擊上傳收據照片</div><div class="upload-sub">支援 JPG、PNG、HEIC</div>';
+      document.getElementById('file-input').value = '';
+      document.getElementById('field-name').value = '';
+      document.getElementById('field-amount').value = '';
+      document.getElementById('field-category').value = '';
+      document.getElementById('field-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('field-note').value = '';
+      imageBase64 = null;
+      btn.innerHTML = '儲存到 Notion';
+      btn.disabled = true;
+      document.getElementById('btn-analyze').disabled = true;
+      setStatus('');
+    }, 2000);
+
+  } catch(err) {
+    setStatus('儲存失敗：' + err.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '儲存到 Notion';
+  }
+}
+
+function addLog(name, amount, category, date) {
+  logs.unshift({ name, amount, category, date });
+  const container = document.getElementById('log-container');
+  container.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'log-list';
+  logs.forEach(l => {
+    const item = document.createElement('div');
+    item.className = 'log-item';
+    item.innerHTML =
+      '<div class="log-left">' +
+        '<div class="log-name">' + escHtml(l.name) + '</div>' +
+        '<div class="log-meta">' + l.date + (l.category ? ' &nbsp;<span class="tag">' + escHtml(l.category) + '</span>' : '') + '</div>' +
+      '</div>' +
+      '<div class="log-amount">$' + l.amount.toLocaleString() + '</div>';
+    list.appendChild(item);
+  });
+  container.appendChild(list);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
